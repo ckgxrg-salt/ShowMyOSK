@@ -13,6 +13,8 @@
       };
       mkClangShell = (pkgs.mkShell.override { stdenv = pkgs.clangStdenv; });
     in {
+      packages.${system}.default = pkgs.callPackage ./package.nix { };
+
       devShells.${system}.default = mkClangShell {
         name = "showmyosk";
 

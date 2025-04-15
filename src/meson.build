@@ -5,4 +5,5 @@ shared_module(
     hyprland,
     hyprland_deps
   ],
+  install: true,
 )

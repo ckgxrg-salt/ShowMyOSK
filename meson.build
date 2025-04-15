@@ -1,5 +1,5 @@
 project(
-  'showmyosk',
+  'show-my-osk',
   'cpp',
   version: '0.1',
   license: 'BSD-2-Clause'
