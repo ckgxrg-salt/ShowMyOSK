@@ -1,32 +1,40 @@
-#include <hyprlang.hpp>
 #define WLR_USE_UNSTABLE
 
 #include <hyprland/src/config/ConfigManager.hpp>
+#include <hyprland/src/debug/Log.hpp>
 #include <hyprland/src/managers/input/TextInput.hpp>
-#include <hyprland/src/plugins/PluginAPI.hpp>
+#include <hyprlang.hpp>
 
-#include <unistd.h>
+#include "globals.hpp"
 
-inline HANDLE PHANDLE = nullptr;
 inline CFunctionHook *textInputEnableHook = nullptr;
+typedef void (*origOnEnable)(void *, CWLSurfaceResource *surfV1);
 inline CFunctionHook *textInputDisableHook = nullptr;
+typedef void (*origOnDisable)(void *);
 
 APICALL EXPORT std::string PLUGIN_API_VERSION() { return HYPRLAND_API_VERSION; }
 
-void onTextInputEnable() {
+void onTextInputEnable(void *thisptr, CWLSurfaceResource *surfV1) {
   static auto *const ONFOCUS =
       (Hyprlang::STRING const *)HyprlandAPI::getConfigValue(
           PHANDLE, "plugin:showmyosk:on_focus")
           ->getDataStaticPtr();
+  Debug::log(LOG, "[show-my-osk] input field focused");
   HyprlandAPI::invokeHyprctlCommand("dispatch", *ONFOCUS);
+
+  (*(origOnEnable)textInputEnableHook->m_pOriginal)(thisptr, surfV1);
 }
 
-void onTextInputDisable() {
+void onTextInputDisable(void *thisptr) {
   static auto *const ONLEAVE =
       (Hyprlang::STRING const *)HyprlandAPI::getConfigValue(
           PHANDLE, "plugin:showmyosk:on_leave")
           ->getDataStaticPtr();
+  Debug::log(LOG, "[show-my-osk] input field unfocused");
   HyprlandAPI::invokeHyprctlCommand("dispatch", *ONLEAVE);
+
+  // Why this crashes Hyprland???
+  //(*(origOnDisable)textInputDisableHook->m_pOriginal)(thisptr);
 }
 
 APICALL EXPORT PLUGIN_DESCRIPTION_INFO PLUGIN_INIT(HANDLE handle) {
@@ -51,7 +59,7 @@ APICALL EXPORT PLUGIN_DESCRIPTION_INFO PLUGIN_INIT(HANDLE handle) {
   bool hookRes = textInputEnableHook->hook();
   hookRes = hookRes && textInputDisableHook->hook();
   if (!hookRes)
-    throw std::runtime_error("show-my-osk: function hook failed");
+    throw std::runtime_error("[show-my-osk] function hook failed");
 
   HyprlandAPI::addConfigValue(PHANDLE, "plugin:showmyosk:on_focus",
                               Hyprlang::STRING{"exec pkill -USR2 wvkbd"});

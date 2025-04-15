@@ -19,17 +19,7 @@ hyprland = dependency(
   required: true,
 )
 hyprland_deps = [
-  dependency('aquamarine'),
-  dependency('hyprlang'),
-  dependency('hyprutils'),
-  dependency('hyprgraphics'),
   dependency('libdrm'),
-  dependency('libinput'),
-  dependency('libudev'),
-  dependency('wayland-server'),
-  dependency('egl'),
-  dependency('pixman-1'),
-  dependency('xkbcommon'),
 ]
 
 subdir('src')
