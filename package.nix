@@ -4,7 +4,7 @@
   hyprlandPlugins,
 }:
 hyprlandPlugins.mkHyprlandPlugin hyprland {
-  pluginName = "showmyosk";
+  pluginName = "show-my-osk";
   version = "0.1";
   src = ./.;
 
