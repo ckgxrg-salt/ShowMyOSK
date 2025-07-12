@@ -12,11 +12,12 @@
         inherit system;
       };
       mkClangShell = (pkgs.mkShell.override { stdenv = pkgs.clangStdenv; });
-    in {
+    in
+    {
       packages.${system}.default = pkgs.callPackage ./package.nix { };
 
       devShells.${system}.default = mkClangShell {
-        name = "showmyosk";
+        name = "show-my-osk";
 
         nativeBuildInputs = with pkgs; [
           meson
