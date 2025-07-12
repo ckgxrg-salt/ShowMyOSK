@@ -13,33 +13,59 @@ typedef void (*origOnEnable)(void *, CWLSurfaceResource *surfV1);
 inline CFunctionHook *textInputDisableHook = nullptr;
 typedef void (*origOnDisable)(void *);
 
+bool enabled;
+
 void onTextInputEnable(void *thisptr, CWLSurfaceResource *surfV1) {
-  static auto *const ONFOCUS =
-      (Hyprlang::STRING const *)HyprlandAPI::getConfigValue(
-          PHANDLE, "plugin:show-my-osk:on_focus")
-          ->getDataStaticPtr();
-  Debug::log(LOG, "[show-my-osk] input field focused");
-  summon(*ONFOCUS);
+  if (enabled) {
+    static auto *const ONFOCUS =
+        (Hyprlang::STRING const *)HyprlandAPI::getConfigValue(
+            PHANDLE, "plugin:show-my-osk:on-focus")
+            ->getDataStaticPtr();
+    Debug::log(LOG, "[show-my-osk] input field focused");
+    bool status = summon(*ONFOCUS);
+    if (!status) {
+      Debug::log(LOG, "[show-my-osk] failed to execute on-focus command");
+    }
+  }
 
   (*(origOnEnable)textInputEnableHook->m_original)(thisptr, surfV1);
 }
 
 void onTextInputDisable(void *thisptr) {
-  static auto *const ONLEAVE =
-      (Hyprlang::STRING const *)HyprlandAPI::getConfigValue(
-          PHANDLE, "plugin:show-my-osk:on_leave")
-          ->getDataStaticPtr();
-  Debug::log(LOG, "[show-my-osk] input field unfocused");
-  summon(*ONLEAVE);
+  if (enabled) {
+    static auto *const ONLEAVE =
+        (Hyprlang::STRING const *)HyprlandAPI::getConfigValue(
+            PHANDLE, "plugin:show-my-osk:on-unfocus")
+            ->getDataStaticPtr();
+    Debug::log(LOG, "[show-my-osk] input field unfocused");
+    bool status = summon(*ONLEAVE);
+    if (!status) {
+      Debug::log(LOG, "[show-my-osk] failed to execute on-unfocus command");
+    }
+  }
 
   // Why this crashes Hyprland..?
   //(*(origOnDisable)textInputDisableHook->m_original)(thisptr);
+}
+
+static SDispatchResult enablePlugin(std::string in) {
+  enabled = false;
+  return SDispatchResult{};
+}
+static SDispatchResult disablePlugin(std::string in) {
+  enabled = false;
+  return SDispatchResult{};
+}
+static SDispatchResult togglePlugin(std::string in) {
+  enabled = !enabled;
+  return SDispatchResult{};
 }
 
 APICALL EXPORT std::string PLUGIN_API_VERSION() { return HYPRLAND_API_VERSION; }
 
 APICALL EXPORT PLUGIN_DESCRIPTION_INFO PLUGIN_INIT(HANDLE handle) {
   PHANDLE = handle;
+  enabled = true;
 
   auto fns = HyprlandAPI::findFunctionsByName(PHANDLE, "onEnabled");
   for (auto &fn : fns) {
@@ -62,10 +88,23 @@ APICALL EXPORT PLUGIN_DESCRIPTION_INFO PLUGIN_INIT(HANDLE handle) {
   if (!hookRes)
     throw std::runtime_error("[show-my-osk] function hook failed");
 
-  HyprlandAPI::addConfigValue(PHANDLE, "plugin:show-my-osk:on_focus",
+  HyprlandAPI::addConfigValue(PHANDLE, "plugin:show-my-osk:on-focus",
                               Hyprlang::STRING{"pkill -USR2 wvkbd"});
-  HyprlandAPI::addConfigValue(PHANDLE, "plugin:show-my-osk:on_leave",
+  HyprlandAPI::addConfigValue(PHANDLE, "plugin:show-my-osk:on-unfocus",
                               Hyprlang::STRING{"pkill -USR1 wvkbd"});
+
+  bool dispatcherRes = true;
+  dispatcherRes = dispatcherRes &&
+                  HyprlandAPI::addDispatcherV2(
+                      PHANDLE, "plugin:show-my-osk:enable", ::enablePlugin);
+  dispatcherRes = dispatcherRes &&
+                  HyprlandAPI::addDispatcherV2(
+                      PHANDLE, "plugin:show-my-osk:disable", ::disablePlugin);
+  dispatcherRes = dispatcherRes &&
+                  HyprlandAPI::addDispatcherV2(
+                      PHANDLE, "plugin:show-my-osk:toggle", ::togglePlugin);
+  if (!dispatcherRes)
+    throw std::runtime_error("[show-my-osk] register dispatchers failed");
 
   return {"show-my-osk",
           "Pops up On-screen keyboard automatically when focusing an input "

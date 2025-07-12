@@ -13,10 +13,10 @@ std::vector<std::string> split(std::string cmd) {
   return args;
 }
 
-int summon(std::string cmd) {
+bool summon(std::string cmd) {
   auto args = split(cmd);
   if (args.empty())
-    return 2;
+    return true;
   std::vector<char *> argv;
   for (auto &arg : args) {
     argv.push_back(arg.data());
@@ -25,9 +25,9 @@ int summon(std::string cmd) {
 
   pid_t pid = fork();
   if (pid == -1) {
-    return 1;
+    return false;
   } else if (pid == 0) {
     execvp(argv[0], argv.data());
   }
-  return 0;
+  return true;
 }
